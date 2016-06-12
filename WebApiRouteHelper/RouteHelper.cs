@@ -92,7 +92,17 @@ namespace WebApiRouteHelper
                 var arg = methodExpr.Arguments[parameter.Position];
                 var lambda = Expression.Lambda(arg);
                 var value = lambda.Compile().DynamicInvoke();
-                routeValues.Add(parameter.Name, value);
+                if (value is Array)
+                {
+                    var i = 1;
+                    foreach (var x in value as Array)
+                    {
+
+                        routeValues.Add(parameter.Name + i, x);
+                        i++;
+                    }
+                }
+                else routeValues.Add(parameter.Name, value);
             }
             // In order to be processed internally by HttpRoute.GetVirtualPath we need to add HttRouteKey attribute 
             if (!routeValues.ContainsKey(HttpRoute.HttpRouteKey))

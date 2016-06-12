@@ -1,4 +1,8 @@
-﻿using System.Web.Http;
+﻿using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web.Http;
+using Microsoft.Owin.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace WebApiRouteHelper.Tests
@@ -43,13 +47,18 @@ namespace WebApiRouteHelper.Tests
     public class RouteHelperTests
     {
         private RouteHelper _helper;
+        private const string BaseUri = "http://localhpst:333";
 
         [TestInitialize]
         public void TestInitialize()
         {
-            var config = new HttpConfiguration();
-            config.MapHttpAttributeRoutes();
-            config.EnsureInitialized();
+            HttpConfiguration config = null;
+            WebApp.Start(BaseUri, builder =>
+            {
+                config = new HttpConfiguration();
+                config.MapHttpAttributeRoutes();
+                config.EnsureInitialized();
+            });
 
             _helper = new RouteHelper(config.Routes);
         }
@@ -62,7 +71,18 @@ namespace WebApiRouteHelper.Tests
             url = _helper.GetRouteUrl((FakeController c) => c.GetLowercase("test"));
             Assert.AreEqual("lowercase/test", url);
             url = _helper.GetRouteUrl((FakeController c) => c.GetValues(new[] {"test1", "test2"}));
+            var x = Get<string[]>(url);
             url = _helper.GetRouteUrl((FakeController c) => c.GetPersonName(new Person{Name = "User", Age = 23}));
+        }
+
+        public async Task<TResponse> Get<TResponse>(string relativeUri) where TResponse : class
+        {
+            using (var httpClient = new HttpClient())
+            {
+                var uri = new Uri(new Uri(BaseUri), relativeUri);
+                var message = await httpClient.GetAsync(uri);
+                return await message.Content.ReadAsAsync<TResponse>();
+            }
         }
     }
 }
